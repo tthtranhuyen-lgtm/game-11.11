@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Đấu Trường Hán Tự - Bài 10 (Bản Hoàn Thiện)</title>
+    <title>Đấu Trường Hán Tự - Bản Siêu Mượt</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;700;900&display=swap');
 
@@ -55,7 +55,7 @@
         .back-btn { background: #64748b; color: white; border: none; padding: 10px 20px; border-radius: 10px; cursor: pointer; font-weight: bold;}
         .score-board { font-size: 1.5rem; font-weight: 900; color: #f59e0b; }
 
-        /* --- GAME 1: ĐẬP CHUỘT --- */
+        /* --- GAME 1: ĐẬP CHUỘT (TỐI ƯU HÓA) --- */
         #game-mole { text-align: center; }
         .prompt-box {
             background: white; padding: 20px; border-radius: 15px; box-shadow: 0 5px 15px rgba(0,0,0,0.1);
@@ -71,17 +71,26 @@
             box-shadow: inset 0 15px 20px rgba(0,0,0,0.4); cursor: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 32 32"><text y="26" font-size="26">🔨</text></svg>') 8 8, pointer;
         }
         
+        /* Tối ưu CSS Animation bằng transform thay vì bottom */
         .mouse-wrapper {
-            position: absolute; bottom: -120px; transition: bottom 0.15s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: absolute; bottom: 0; 
+            transform: translateY(150px); /* Giấu chuột xuống dưới */
+            transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
             display: flex; flex-direction: column; align-items: center;
+            will-change: transform; /* Báo trình duyệt tối ưu animation */
         }
-        .mouse-wrapper.active { bottom: 10px; }
-        .mouse-wrapper.hit { bottom: -120px; transition: bottom 0.1s; }
+        .mouse-wrapper.active { 
+            transform: translateY(-10px); /* Kéo chuột lên */
+        }
+        .mouse-wrapper.hit { 
+            transform: translateY(150px) scale(0.8); /* Đập trúng thì trụt xuống */
+            transition: transform 0.1s; 
+        }
         
         .char-board {
             background: #fef08a; border: 3px solid #ca8a04; border-radius: 10px;
             padding: 5px 15px; font-size: 2.5rem; font-weight: 900; color: #1e293b;
-            position: absolute; top: -50px; z-index: 10; white-space: nowrap;
+            position: absolute; top: -55px; z-index: 10; white-space: nowrap;
             box-shadow: 2px 2px 0 #ca8a04;
         }
         .mouse-body {
@@ -105,6 +114,7 @@
         .mouse-eye::after { content: ''; position: absolute; width: 3px; height: 3px; background: white; border-radius: 50%; top: 2px; left: 2px; }
         .mouse-nose { width: 16px; height: 12px; background: #f472b6; border-radius: 50%; margin-top: 5px; }
 
+        /* Hiệu ứng con búa */
         .hammer-effect {
             position: absolute; font-size: 4rem; z-index: 100; pointer-events: none;
             animation: smash 0.3s ease-in forwards;
@@ -136,29 +146,15 @@
         .timer { color: #ef4444; }
         
         .diff-grid {
-            display: grid; 
-            grid-template-columns: repeat(4, 1fr); 
-            gap: 10px; 
-            background: #f8fafc; 
-            padding: 20px; 
-            border-radius: 20px;
-            max-width: 500px;
-            margin: 0 auto;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; 
+            background: #f8fafc; padding: 20px; border-radius: 20px;
+            max-width: 500px; margin: 0 auto; box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
         .diff-item {
-            background: white; 
-            border-radius: 10px; 
-            height: 80px;
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            font-size: 2.5rem; 
-            font-weight: bold; 
-            cursor: pointer;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-            transition: 0.2s;
-            user-select: none;
+            background: white; border-radius: 10px; height: 80px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 2.5rem; font-weight: bold; cursor: pointer;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05); transition: 0.2s; user-select: none;
         }
         .diff-item:hover { transform: scale(1.05); background: #e2e8f0; }
         .diff-item.correct { background: #86efac; color: white; transform: scale(1.1); box-shadow: 0 0 15px #22c55e; }
@@ -233,7 +229,7 @@
     </div>
 
 <script>
-    // --- ÂM THANH CƠ BẢN ---
+    // --- ÂM THANH ---
     let audioCtx = null;
     let musicInterval = null;
     let isMusicPlaying = false;
@@ -242,6 +238,7 @@
         if (!audioCtx) {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         }
+        if(audioCtx.state === 'suspended') audioCtx.resume();
     }
 
     function startMusic() {
@@ -298,7 +295,6 @@
         osc.stop(audioCtx.currentTime + 0.2);
     }
 
-    // Tiếng "Ting" khi tìm đúng
     function playSuccessSound() {
         initAudio();
         if (!audioCtx) return;
@@ -326,11 +322,12 @@
         document.querySelectorAll('.game-container').forEach(el => el.style.display = 'none');
         document.getElementById('main-menu').style.display = 'flex';
         stopMusic();
-        clearInterval(moleTimer);
+        clearTimeout(moleTimer);
+        clearTimeout(hideTimer);
         clearInterval(diffTimer);
     }
 
-    // --- KHO TỪ VỰNG (Dùng cho Đập Chuột & Lật thẻ) ---
+    // --- KHO TỪ VỰNG ---
     const vocabData = [
         { char: "我", pinyin: "wǒ", meaning: "Tôi" },
         { char: "你", pinyin: "nǐ", meaning: "Bạn" },
@@ -349,10 +346,13 @@
         { char: "手机", pinyin: "shǒujī", meaning: "Điện thoại di động" }
     ];
 
-    // --- GAME 1: ĐẬP CHUỘT ---
+    // --- GAME 1: ĐẬP CHUỘT (LOGIC MỚI MƯỢT MÀ) ---
     let moleScore = 0;
     let moleTimer = null;
+    let hideTimer = null;
+    let activeMouse = null;
     let currentMoleWord = null;
+    const moleGrid = document.getElementById('mole-grid');
 
     function startMoleGame() {
         document.getElementById('main-menu').style.display = 'none';
@@ -363,8 +363,8 @@
         startMusic();
         document.getElementById('music-btn').innerText = '🔊 Tắt Nhạc';
 
-        const grid = document.getElementById('mole-grid');
-        grid.innerHTML = '';
+        // Khởi tạo 9 cái hố
+        moleGrid.innerHTML = '';
         for(let i=0; i<9; i++) {
             const hole = document.createElement('div');
             hole.className = 'mole-hole';
@@ -382,54 +382,92 @@
                     </div>
                 </div>
             `;
-            grid.appendChild(hole);
+            moleGrid.appendChild(hole);
         }
 
+        // Chỉ gắn sự kiện 1 lần duy nhất vào cái Lưới (Event Delegation)
+        moleGrid.onclick = handleMoleClick;
+
         nextMoleRound();
-        if(moleTimer) clearInterval(moleTimer);
-        
-        moleTimer = setInterval(() => {
-            document.querySelectorAll('.mouse-wrapper').forEach(m => m.classList.remove('active'));
-            
-            const randomIndex = Math.floor(Math.random() * 9);
-            const mouse = document.getElementById(`mouse-${randomIndex}`);
-            const board = document.getElementById(`board-${randomIndex}`);
-            const randomWord = vocabData[Math.floor(Math.random() * vocabData.length)];
-            
-            board.innerText = randomWord.char;
-            mouse.dataset.char = randomWord.char;
-            mouse.classList.add('active');
-
-            mouse.onclick = function(e) {
-                if(!this.classList.contains('active')) return;
-
-                playHitSound();
-                const hammer = document.createElement('div');
-                hammer.className = 'hammer-effect';
-                hammer.innerText = '🔨';
-                hammer.style.left = (e.offsetX - 20) + 'px';
-                hammer.style.top = (e.offsetY - 50) + 'px';
-                this.parentElement.appendChild(hammer);
-                setTimeout(() => hammer.remove(), 300);
-
-                if(this.dataset.char === currentMoleWord.char) {
-                    moleScore += 10;
-                    document.getElementById('mole-score').innerText = moleScore;
-                    this.classList.add('hit');
-                    speakText(currentMoleWord.char);
-                    setTimeout(() => { nextMoleRound(); }, 400);
-                } else {
-                    this.style.transform = 'translateX(10px)';
-                    setTimeout(() => this.style.transform = 'translateX(-10px)', 100);
-                    setTimeout(() => this.style.transform = 'translateX(0)', 200);
-                }
-            };
-        }, 900); 
+        moleTimer = setTimeout(popMouse, 500);
     }
 
     function nextMoleRound() {
         currentMoleWord = vocabData[Math.floor(Math.random() * vocabData.length)];
         document.getElementById('mole-prompt').innerText = `Tìm từ có nghĩa: "${currentMoleWord.meaning}"`;
+    }
+
+    function popMouse() {
+        // Ẩn con chuột cũ (nếu có)
+        if(activeMouse) {
+            activeMouse.classList.remove('active');
+        }
+
+        // Chọn ngẫu nhiên 1 con chuột mới
+        const randomIndex = Math.floor(Math.random() * 9);
+        activeMouse = document.getElementById(`mouse-${randomIndex}`);
+        const board = document.getElementById(`board-${randomIndex}`);
+        
+        // Chọn từ ngẫu nhiên cho chuột (có thể trùng hoặc khác với đáp án)
+        const randomWord = vocabData[Math.floor(Math.random() * vocabData.length)];
+        board.innerText = randomWord.char;
+        activeMouse.dataset.char = randomWord.char;
+
+        // Đẩy chuột lên
+        activeMouse.classList.add('active');
+
+        // Hẹn giờ tự động trụt xuống sau 900ms (nếu người chơi không đập)
+        clearTimeout(hideTimer);
+        hideTimer = setTimeout(() => {
+            if(activeMouse) activeMouse.classList.remove('active');
+            moleTimer = setTimeout(popMouse, 200); // Chờ 0.2s rồi nhả chuột tiếp theo
+        }, 900);
+    }
+
+    function handleMoleClick(e) {
+        // Tìm xem có click trúng con chuột nào đang active không
+        const mouse = e.target.closest('.mouse-wrapper');
+        if (!mouse || !mouse.classList.contains('active') || mouse.classList.contains('hit')) return;
+
+        // Dừng bộ đếm tự động trụt xuống
+        clearTimeout(hideTimer);
+
+        playHitSound();
+        // Hiệu ứng búa
+        const hammer = document.createElement('div');
+        hammer.className = 'hammer-effect';
+        hammer.innerText = '🔨';
+        hammer.style.left = (e.offsetX - 20) + 'px';
+        hammer.style.top = (e.offsetY - 50) + 'px';
+        mouse.parentElement.appendChild(hammer);
+        setTimeout(() => hammer.remove(), 300);
+
+        if(mouse.dataset.char === currentMoleWord.char) {
+            // ĐẬP TRÚNG
+            moleScore += 10;
+            document.getElementById('mole-score').innerText = moleScore;
+            playSuccessSound();
+            speakText(currentMoleWord.char);
+            
+            mouse.classList.add('hit'); // Hiệu ứng trụt xuống
+            
+            // Chờ 0.3s cho hiệu ứng chạy xong rồi sang câu mới
+            moleTimer = setTimeout(() => {
+                mouse.classList.remove('active', 'hit');
+                nextMoleRound();
+                popMouse();
+            }, 300);
+        } else {
+            // ĐẬP SAI (Rung lắc)
+            mouse.style.transform = 'translateY(-10px) translateX(10px)';
+            setTimeout(() => mouse.style.transform = 'translateY(-10px) translateX(-10px)', 100);
+            setTimeout(() => {
+                mouse.style.transform = 'translateY(-10px) translateX(0)';
+                // Nếu sai, cho chuột trụt xuống luôn
+                mouse.classList.remove('active');
+                moleTimer = setTimeout(popMouse, 200);
+            }, 200);
+        }
     }
 
     // --- GAME 2: LẬT THẺ BÀI ---
@@ -517,20 +555,11 @@
     }
 
     // --- GAME 3: TÌM CHỮ KHÁC BIỆT ---
-    // Các cặp chữ dễ nhầm lẫn (Chữ gốc - Chữ khác biệt)
     const diffPairs = [
-        { base: "我", diff: "找" }, 
-        { base: "门", diff: "问" },
-        { base: "手", diff: "毛" },
-        { base: "电", diff: "申" },
-        { base: "话", diff: "活" },
-        { base: "家", diff: "冢" },
-        { base: "住", diff: "注" },
-        { base: "楼", diff: "搂" },
-        { base: "办", diff: "为" },
-        { base: "公", diff: "么" },
-        { base: "房", diff: "户" },
-        { base: "间", diff: "问" }
+        { base: "我", diff: "找" }, { base: "门", diff: "问" }, { base: "手", diff: "毛" },
+        { base: "电", diff: "申" }, { base: "话", diff: "活" }, { base: "家", diff: "冢" },
+        { base: "住", diff: "注" }, { base: "楼", diff: "搂" }, { base: "办", diff: "为" },
+        { base: "公", diff: "么" }, { base: "房", diff: "户" }, { base: "间", diff: "问" }
     ];
 
     let diffScore = 0;
@@ -550,17 +579,12 @@
 
     function loadDiffRound() {
         clearInterval(diffTimer);
-        timeLeft = 15;
+        timeLeft = Math.max(5, 15 - diffLevel);
         document.getElementById('diff-timer').innerText = timeLeft;
         document.getElementById('diff-level').innerText = diffLevel;
 
-        // Chọn ngẫu nhiên 1 cặp chữ
         const pair = diffPairs[Math.floor(Math.random() * diffPairs.length)];
-        const baseChar = pair.base;
-        const diffChar = pair.diff;
-
-        // Xác định ngẫu nhiên vị trí của chữ khác biệt
-        const gridSize = 16; // 4x4
+        const gridSize = 16;
         const diffIndex = Math.floor(Math.random() * gridSize);
 
         const grid = document.getElementById('diff-grid');
@@ -570,35 +594,28 @@
             const item = document.createElement('div');
             item.className = 'diff-item';
             if(i === diffIndex) {
-                item.innerText = diffChar;
+                item.innerText = pair.diff;
                 currentDiffTarget = item;
             } else {
-                item.innerText = baseChar;
+                item.innerText = pair.base;
             }
 
             item.onclick = function() {
                 if(this.classList.contains('correct') || this.classList.contains('wrong')) return;
 
                 if(this === currentDiffTarget) {
-                    // Đúng
                     this.classList.add('correct');
                     playSuccessSound();
                     diffScore += 10;
                     document.getElementById('diff-score').innerText = diffScore;
-                    
                     clearInterval(diffTimer);
-                    
                     setTimeout(() => {
                         diffLevel++;
-                        // Tăng độ khó: giảm thời gian ở các màn sau
-                        timeLeft = Math.max(5, 15 - diffLevel); 
                         loadDiffRound();
                     }, 800);
                 } else {
-                    // Sai
                     this.classList.add('wrong');
                     playHitSound();
-                    // Phạt trừ 2 giây
                     timeLeft = Math.max(0, timeLeft - 2);
                     document.getElementById('diff-timer').innerText = timeLeft;
                     setTimeout(() => this.classList.remove('wrong'), 500);
@@ -607,14 +624,13 @@
             grid.appendChild(item);
         }
 
-        // Chạy đồng hồ đếm ngược
         diffTimer = setInterval(() => {
             timeLeft--;
             document.getElementById('diff-timer').innerText = timeLeft;
             if(timeLeft <= 0) {
                 clearInterval(diffTimer);
                 alert(`⏰ Hết giờ! Bạn đã đạt ${diffScore} điểm.`);
-                startDiffGame(); // Chơi lại
+                startDiffGame();
             }
         }, 1000);
     }
